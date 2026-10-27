@@ -8,8 +8,14 @@
 <meta property="og:title" content="VibeCADing">
 <meta property="og:description" content="Vibe CADing for the built and the imagined">
 <meta property="og:url" content="https://vibecading.io/">
+<meta property="og:image" content="https://vibecading.io/brand/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231C3F94'/%3E%3Cpath d='M16 6l9 5v10l-9 5-9-5V11z M16 16l9-5 M16 16v10 M16 16l-9-5' fill='none' stroke='%23EAF0FF' stroke-width='1.6' stroke-linejoin='round'/%3E%3Ccircle cx='25' cy='21' r='2.4' fill='%23FF6FB0'/%3E%3C/svg%3E">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/svg+xml" href="/brand/mark-a-32.svg">
+<link rel="apple-touch-icon" href="/brand/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;1,400&family=Unbounded:wght@500;600&display=swap">
@@ -70,7 +76,8 @@ a:hover { text-decoration-thickness: 2px; }
   display: flex; align-items: center; justify-content: space-between; gap: 1rem;
   padding-block: 1.25rem;
 }
-.mark { font: 600 1.05rem/1 var(--display); letter-spacing: -.01em; text-decoration: none; }
+.mark { display: block; line-height: 0; }
+.mark img { display: block; width: auto; height: 32px; }
 .bar nav { display: flex; gap: 1.5rem; font-size: .95rem; }
 .bar nav a { color: var(--chalk-soft); text-decoration: none; }
 .bar nav a:hover { color: var(--chalk); text-decoration: underline; }
@@ -178,7 +185,8 @@ footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; g
   .item .status { grid-column: 2; grid-row: 1; }
 }
 @media (max-width: 480px) {
-  .bar nav { gap: 1rem; }
+  .bar { flex-wrap: wrap; row-gap: .75rem; }
+  .bar nav { gap: 1rem; flex-wrap: wrap; }
 }
 </style>
 </head>
@@ -186,8 +194,9 @@ footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; g
 
 <div class="sheet">
   <header class="wrap bar">
-    <a class="mark" href="/">VibeCADing</a>
+    <a class="mark" href="/"><img src="/brand/lockup-a-dark.svg" width="162" height="32" alt="VibeCADing"></a>
     <nav aria-label="Main">
+      <a href="/play/">Play</a>
       <a href="https://github.com/orgs/vibecading/discussions">Discussions</a>
       <a href="https://github.com/vibecading/awesome-vibecading">Catalog</a>
       <a href="https://github.com/vibecading">GitHub</a>

@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0B1330">
+  <script src="theme.js"></script>
+  <title>Every key is geometry · VibeCADing</title>
+  <meta name="description" content="A keyboard game: every letter is a shape. While your agents build, you play">
+  <meta property="og:title" content="Every key is geometry">
+  <meta property="og:description" content="While your agents build, you play">
+  <meta property="og:url" content="https://vibecading.io/play/">
+  <meta property="og:image" content="https://vibecading.io/brand/og-image.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="../favicon.ico" sizes="any">
+  <link rel="icon" type="image/svg+xml" href="../brand/mark-a-32.svg">
+  <link rel="apple-touch-icon" href="../brand/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;family=Unbounded:wght@500;600&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="theme.css">
+  <script src="puzzles.js" defer></script>
+  <script src="engine.js" defer></script>
+  <script src="icon-frames.js" defer></script>
+  <script src="geometry.js" defer></script>
+  <script src="persistence.js" defer></script>
+  <script src="interface.js" defer></script>
+  <script src="keyboard.js" defer></script>
+  <script src="controller.js" defer></script>
+</head>
+<body data-mode="challenge" data-phase="typing" data-level="0">
+  <header class="topbar">
+    <a class="brand" href="../" aria-label="VibeCADing home"><img src="../brand/lockup-a-dark.svg" width="230" height="40" alt="VibeCADing"></a>
+    <div class="modes" role="group" aria-label="Game mode">
+      <button type="button" id="challenge-mode" aria-pressed="true">Blueprints</button>
+      <button type="button" id="spatial-mode" aria-pressed="false">Spatial</button>
+      <button type="button" id="kit-mode" aria-pressed="false">Parts kit</button>
+      <button type="button" id="daily-mode" aria-pressed="false">Daily</button>
+      <button type="button" id="sandbox-mode" aria-pressed="false">Free build</button>
+    </div>
+    <label class="theme-picker"><span>Theme</span><select id="theme-select" aria-label="Color theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
+  </header>
+  <main>
+    <div class="intro">
+      <div><h1>Every key is geometry</h1><p>While your agents build, you play</p></div>
+      <div class="stats" aria-label="Game results">
+        <div><span>Score</span><strong id="score">0</strong></div>
+        <div><span>Streak</span><strong id="combo">—</strong></div>
+        <div><span>Best</span><strong id="best">0</strong></div>
+        <div><span>Time</span><strong id="elapsed">00:00</strong></div>
+      </div>
+    </div>
+    <div class="workbench">
+      <section class="terminal" aria-label="Geometry terminal">
+        <div class="panel-bar"><h2>geometry / input</h2><div class="scene-tools"><button type="button" id="restore-build" hidden>Restore build</button><button type="button" id="edit-build" hidden>Edit build</button><button type="button" id="export" disabled>Export SVG</button></div></div>
+        <div class="stage" id="stage">
+          <span id="scene-label" class="scene-state">waiting for input</span>
+          <div id="scene"></div>
+          <span class="scene-caption" id="scene-caption">Read the blueprint. Give it volume</span>
+          <span id="points-pop" aria-hidden="true"></span>
+        </div>
+        <div class="console">
+          <div class="history" id="history" aria-label="Build history"></div>
+          <div class="command" id="command" role="textbox" tabindex="0" aria-label="Geometry command. Every letter A to Z adds a shape; Enter builds; Backspace deletes the last queued shape; Escape clears the queue" aria-describedby="input-help" aria-keyshortcuts="Enter Backspace Escape">
+            <span class="prompt" aria-hidden="true">&gt;</span>
+            <div id="queue" class="queue" role="list" aria-label="Typed shapes"></div>
+            <svg class="plane-cursor" viewBox="24 29 39 22" aria-hidden="true"><path d="M31 44H48L57 35H40Z"/></svg>
+            <span class="command-placeholder" id="command-placeholder">Type your first volume</span>
+          </div>
+          <div class="input-meta"><span id="input-help">A–Z — geometry <span class="desktop-hint">· Backspace — delete · Esc — clear</span></span><span id="queue-count">0 / 16</span></div>
+        </div>
+        <div id="placement" class="placement" hidden>
+          <div class="placement-copy"><span>Next shape <strong id="active-cell" role="status" aria-live="polite">B2</strong></span><span id="field-count">0 / 9 cells used</span><span class="placement-help">Four arrows or select a tile</span></div>
+          <div id="cell-map" class="cell-map" role="group" aria-label="Build cells, columns A to C, rows 1 to 3">
+            <button type="button" data-cell="A1" aria-pressed="false">A1</button><button type="button" data-cell="B1" aria-pressed="false">B1</button><button type="button" data-cell="C1" aria-pressed="false">C1</button>
+            <button type="button" data-cell="A2" aria-pressed="false">A2</button><button type="button" data-cell="B2" aria-pressed="true">B2</button><button type="button" data-cell="C2" aria-pressed="false">C2</button>
+            <button type="button" data-cell="A3" aria-pressed="false">A3</button><button type="button" data-cell="B3" aria-pressed="false">B3</button><button type="button" data-cell="C3" aria-pressed="false">C3</button>
+          </div>
+          <div class="move-controls" role="group" aria-label="Move the next shape along the isometric axes">
+            <button type="button" data-move="left" aria-label="Left arrow: move along X minus" aria-keyshortcuts="ArrowLeft">↖ <kbd>←</kbd></button><button type="button" data-move="up" aria-label="Up arrow: move along Y minus" aria-keyshortcuts="ArrowUp">↗ <kbd>↑</kbd></button>
+            <button type="button" data-move="down" aria-label="Down arrow: move along Y plus" aria-keyshortcuts="ArrowDown">↙ <kbd>↓</kbd></button><button type="button" data-move="right" aria-label="Right arrow: move along X plus" aria-keyshortcuts="ArrowRight">↘ <kbd>→</kbd></button>
+          </div>
+        </div>
+        <p id="run-note" class="run-note" role="status" hidden></p>
+        <div class="keyboard-toolbar"><h2>geometry / alphabet</h2><div role="group" aria-label="Keyboard layout"><button type="button" id="qwerty-layout" aria-pressed="true">QWERTY</button><button type="button" id="compact-layout" aria-pressed="false">Compact</button></div></div>
+        <div class="keyboard-shell"><div class="keyboard geometry-keyboard" id="shape-keys" aria-label="Interactive geometry keyboard, A to Z"></div></div>
+        <div class="key-readout" aria-live="polite"><span id="key-preview" aria-hidden="true"></span><div><strong id="key-name">Press any letter</strong><span id="key-detail">26 keys · 26 different forms</span></div></div><p id="keyboard-layout-note" class="keyboard-layout-note"></p>
+        <div class="actions">
+          <button type="button" id="undo" class="quiet">Delete <kbd>⌫</kbd></button>
+          <button type="button" id="clear" class="quiet">Clear</button>
+          <button type="button" id="build" class="primary">Build <kbd>↵</kbd></button>
+        </div>
+      </section>
+      <aside class="brief" aria-label="Challenge">
+        <div class="brief-top"><span id="level-counter">Blueprint 1 / 12</span><div id="progress" class="progress" aria-label="Completed blueprints"></div></div>
+        <h2 id="level-name">First volume</h2>
+        <p id="level-description">Match the shapes from bottom to top</p>
+        <button type="button" id="blueprint" class="blueprint" aria-label="Inspect blueprint at a larger size" aria-haspopup="dialog"></button>
+        <div class="formula-bar" id="formula-bar"><span id="formula-status">Guided formula</span><button type="button" id="hint" hidden aria-keyshortcuts="Shift+Slash">Reveal formula <kbd>?</kbd></button></div>
+        <div id="target" class="target" role="list" aria-label="Blueprint formula"></div>
+        <div id="rating" class="rating" aria-label="Blueprint rating" hidden></div>
+        <div class="feedback" id="feedback" role="status" aria-live="polite">Start with a plane, then add a block</div>
+        <button type="button" class="finish-free" id="finish-free" hidden>Build your own</button>
+        <div class="brief-bottom"><span>Mistakes <strong id="mistakes">0</strong></span><button type="button" id="restart" class="text-button">Restart</button></div>
+      </aside>
+    </div>
+    <section id="collection" class="collection" hidden aria-labelledby="collection-title"><div class="collection-heading"><h2 id="collection-title">Your blueprint collection</h2><span id="collection-total"></span></div><div id="collection-grid" class="collection-grid" role="list"></div></section>
+    <section id="daily-result" class="daily-result" hidden aria-labelledby="daily-result-title"><div><h2 id="daily-result-title">Today's result card</h2><p>A local result. Copy or save it to share yourself</p></div><pre id="daily-card"></pre><div class="result-actions"><button type="button" id="copy-result">Copy result</button><button type="button" id="save-result">Save card</button><span id="share-status" role="status" aria-live="polite"></span></div></section>
+    <details class="help"><summary>How it works</summary><p>Every letter A–Z adds its own shape. The interactive keyboard shows the map: hold a physical key to light it, or tap a key on screen. Holding a key adds one shape. QWERTY follows the physical rows; Compact fits touch screens. Original digit shortcuts 1–6 still work. ? reveals a formula; H is now Hex prism. Enter builds the command</p><p>Backspace removes the last queued shape; Escape clears the queue. An empty draft leaves the scene empty. Restore build brings back the last submitted build; Edit build recalls its command for editing</p><p>Start at B2. Left/Right move along X (columns A–C), Up/Down along Y (rows 1–3). Select a tile, stack, or map cell directly. Free build accepts up to 16 shapes, with SVG export. Try Blueprints, Spatial, Parts kit or the daily blueprint. Kits disable all shapes absent from their inventory; removing a queued part returns it</p><p>Campaign hints cost 50 points and limit stars. Daily uses the date's UTC seed and scores accuracy and economical shape input; time and movement are free. Sessions and records save on this device. Copy or download daily result cards to share yourself</p></details>
+  </main>
+  <dialog id="blueprint-zoom" aria-labelledby="zoom-title"><div class="modal-bar"><h2 id="zoom-title">Blueprint</h2><button type="button" id="close-blueprint" autofocus>Close <kbd>Esc</kbd></button></div><div id="zoom-scene"></div><p>Read each stack from bottom to top. Cell addresses locate it on the field</p></dialog>
+  <footer><span>Vibe CADing for the built and the imagined</span><span id="save-status">Saving progress…</span><a href="../brand/mark-a-animated.svg">The blinking plane</a></footer>
+  <noscript><p class="noscript">Enable JavaScript in your browser to play</p></noscript>
+</body>
+</html>
