@@ -214,7 +214,7 @@ footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; g
     </div>
 
     <div class="stage">
-      <canvas id="geo" role="img" aria-label="A point drawing of a courtyard block, seven floors"></canvas>
+      <canvas id="geo" role="img" aria-label="A line drawing of a courtyard block, seven floors"></canvas>
       <button class="pause" id="pause" type="button">Pause</button>
       <ul class="prompts" id="prompts"></ul>
       <p class="note">Example prompts. Shapes are sketched in code, live in your browser</p>
@@ -316,12 +316,11 @@ footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; g
 
 <script>
 (() => {
-  const N = 3200;
-
   // seeded random so shapes look the same on every visit
   let seed = 7;
   const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
 
+  // geometry is a list of edges [x0,y0,z0, x1,y1,z1], y up
   function box(E, x0, y0, z0, x1, y1, z1) {
     const c = [[x0,z0],[x1,z0],[x1,z1],[x0,z1]];
     for (let i = 0; i < 4; i++) {
@@ -335,50 +334,78 @@ footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; g
   function ring(E, pts) {
     for (let i = 0; i < pts.length; i++) E.push([...pts[i], ...pts[(i + 1) % pts.length]]);
   }
+  const circle = (x, y, z, r, n, turn = 0) => Array.from({ length: n }, (_, i) => {
+    const a = (i + turn) / n * Math.PI * 2;
+    return [x + Math.cos(a) * r, y, z + Math.sin(a) * r];
+  });
+  // a tapered prism: rings at each level, verticals between the first and last
+  function tower(E, x, z, levels, n) {
+    const rings = levels.map(([y, r]) => circle(x, y, z, r, n));
+    rings.forEach(r => ring(E, r));
+    for (let i = 0; i < n; i++) E.push([...rings[0][i], ...rings[rings.length - 1][i]]);
+    return rings;
+  }
 
   function courtyard() {
     const E = [], h = 3.2, floors = 7, top = h * floors;
+    rect(E, -3, -3, 27, 21, 0);
     for (let f = 0; f <= floors; f++) { rect(E, 0, 0, 24, 18, f * h); rect(E, 6, 5, 18, 13, f * h); }
     for (const [x, z] of [[0,0],[24,0],[24,18],[0,18],[6,5],[18,5],[18,13],[6,13]]) E.push([x,0,z, x,top,z]);
+    // gate through the south wing
+    E.push([10,0,0, 10,h,0], [14,0,0, 14,h,0], [10,0,5, 10,h,5], [14,0,5, 14,h,5]);
     return E;
   }
 
   function island() {
-    const E = [], k = 10;
-    const radii = Array.from({ length: k }, () => 11 * (0.78 + 0.22 * rnd()));
-    const layer = (y, s) => radii.map((r, i) => {
-      const a = i / k * Math.PI * 2;
-      return [Math.cos(a) * r * s, y, Math.sin(a) * r * s];
+    const E = [], k = 9;
+    const top = Array.from({ length: k }, (_, i) => {
+      const a = i / k * Math.PI * 2, r = 9 * (0.8 + 0.25 * rnd());
+      return [Math.cos(a) * r, 0, Math.sin(a) * r * 0.85];
     });
-    const rings = [layer(0, 1), layer(-3, 0.74), layer(-7, 0.38)];
-    rings.forEach(r => ring(E, r));
-    for (let j = 0; j < 2; j++) for (let i = 0; i < k; i++) E.push([...rings[j][i], ...rings[j + 1][i]]);
-    for (let i = 0; i < k; i++) E.push([...rings[2][i], 0, -12, 0]);
-    // lighthouse
-    const lx = 2.5, lz = -1.5, sides = 8;
-    const tower = (y, r) => Array.from({ length: sides }, (_, i) => {
-      const a = i / sides * Math.PI * 2;
-      return [lx + Math.cos(a) * r, y, lz + Math.sin(a) * r];
+    // each rock ring sits half a step round from the one above, so the sides read as facets
+    const mid = top.map((p, i) => {
+      const q = top[(i + 1) % k], s = 0.72;
+      return [(p[0] + q[0]) / 2 * s, -2.6, (p[2] + q[2]) / 2 * s];
     });
-    const levels = [[0, 1.9], [3, 1.65], [6, 1.4], [9, 1.2], [10.6, 1.5]];
-    levels.forEach(([y, r]) => ring(E, tower(y, r)));
-    const base = tower(0, 1.9), neck = tower(9, 1.2), lamp = tower(10.6, 1.5);
-    for (let i = 0; i < sides; i++) { E.push([...base[i], ...neck[i]]); E.push([...lamp[i], lx, 12.8, lz]); }
-    // waterfall over the rim
-    const [wx, wy, wz] = rings[0][2];
-    for (let i = 0; i < 4; i++) E.push([wx - 0.6 * i, wy, wz + 0.3 * i, wx * 1.05 - 0.6 * i, -16, wz * 1.05 + 0.3 * i]);
+    const low = mid.map((p, i) => {
+      const q = mid[(i + 1) % k], s = 0.5;
+      return [(p[0] + q[0]) / 2 * s, -6, (p[2] + q[2]) / 2 * s];
+    });
+    const tip = [0.8, -11, -0.4];
+    ring(E, top); ring(E, mid); ring(E, low);
+    for (let i = 0; i < k; i++) {
+      E.push([...top[i], ...mid[i]], [...top[(i + 1) % k], ...mid[i]]);
+      E.push([...mid[i], ...low[i]], [...mid[(i + 1) % k], ...low[i]]);
+      E.push([...low[i], ...tip]);
+    }
+    // lighthouse: tapered tower, gallery, lantern, roof
+    const lx = 3, lz = -1.5, n = 8;
+    tower(E, lx, lz, [[0, 1.5], [6.5, 0.95]], n);
+    ring(E, circle(lx, 6.5, lz, 1.45, n));
+    const lantern = tower(E, lx, lz, [[6.5, 0.8], [8, 0.8]], n);
+    for (let i = 0; i < n; i++) E.push([...lantern[1][i], lx, 9.6, lz]);
+    // two low-poly trees
+    for (const [x, z, s] of [[-4, 2, 1], [-1.5, 4.2, 0.75]]) {
+      const base = circle(x, 0.6 * s, z, 1.3 * s, 5, 0.3);
+      ring(E, base);
+      base.forEach(p => E.push([...p, x, 4 * s, z]));
+      E.push([x, 0, z, x, 0.6 * s, z]);
+    }
     return E;
   }
 
   function pavilion() {
-    const E = [], s = 14, hs = [3, 8, 3, 8];
-    const P = [[0,hs[0],0], [s,hs[1],0], [s,hs[2],s], [0,hs[3],s]];
-    rect(E, -2, -2, s + 2, s + 2, 0);
-    rect(E, -2, -2, s + 2, s + 2, 0.5);
-    P.forEach(([x, y, z]) => E.push([x,0,z, x,y,z]));
+    const E = [], s = 14;
+    // a saddle resting on its two low corners, the high ones cantilevered
+    const P = [[0,2.6,0], [s,8,0], [s,2.6,s], [0,8,s]];
+    rect(E, -3, -3, s + 3, s + 3, 0);
+    for (const [x, y, z] of [P[0], P[2]]) {
+      rect(E, x - 1, z - 1, x + 1, z + 1, 0);
+      E.push([x, 0, z, x, y, z]);
+    }
     const S = (u, v) => [0, 1, 2].map(d =>
       (1-u)*(1-v)*P[0][d] + u*(1-v)*P[1][d] + u*v*P[2][d] + (1-u)*v*P[3][d]);
-    const n = 12;
+    const n = 10;
     for (let i = 0; i <= n; i++) {
       const t = i / n;
       E.push([...S(t, 0), ...S(t, 1)], [...S(0, t), ...S(1, t)]);
@@ -387,42 +414,61 @@ footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; g
   }
 
   function dungeon() {
-    const E = [], t = 2, n = 7, w = t * n;
+    const E = [], t = 2, n = 7, w = t * n, h = 2.6, d = 0.6;
     for (let i = 0; i <= n; i++) E.push([i*t,0,0, i*t,0,w], [0,0,i*t, w,0,i*t]);
-    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
-      const edge = i === 0 || j === 0 || i === n - 1 || j === n - 1;
-      if (!edge || (j === 0 && i === 3)) continue;
-      const stack = 1 + (rnd() < 0.55 ? 1 : 0);
-      for (let b = 0; b < stack; b++) box(E, i*t, b*t, j*t, (i+1)*t, (b+1)*t, (j+1)*t);
-    }
-    box(E, 3*t, 0, 3*t, 4*t, t, 4*t); box(E, 3*t, t, 3*t, 4*t, 2*t, 4*t);
-    box(E, 5*t + 0.2, 0, 5*t + 0.5, 6*t - 0.2, 1.1, 6*t - 0.3);
+    // walls with a doorway in the middle of the near side
+    box(E, 0, 0, w - d, w, h, w);
+    box(E, 0, 0, 0, d, h, w - d);
+    box(E, w - d, 0, 0, w, h, w - d);
+    box(E, d, 0, 0, 3 * t, h, d);
+    box(E, 4 * t, 0, 0, w - d, h, d);
+    // pillars, a chest, and a step up to the dais
+    for (const [i, j] of [[2, 2], [4, 2], [2, 4], [4, 4]]) box(E, i*t + .55, 0, j*t + .55, (i+1)*t - .55, h, (j+1)*t - .55);
+    box(E, 3*t + .4, 0, 5*t + .5, 4*t - .4, .9, 6*t - .3);
+    box(E, 2*t, 0, 6*t - d, 5*t, .3, w - d);
     return E;
   }
 
-  function sample(E) {
-    const lens = E.map(e => Math.hypot(e[3]-e[0], e[4]-e[1], e[5]-e[2]));
-    const total = lens.reduce((a, b) => a + b, 0);
+  // centre on the bounding box, scale to a unit sphere, order edges bottom to top so drawing builds upwards
+  function prepare(E) {
     let mn = [1e9,1e9,1e9], mx = [-1e9,-1e9,-1e9];
     E.forEach(e => { for (let d = 0; d < 3; d++) { mn[d] = Math.min(mn[d], e[d], e[d+3]); mx[d] = Math.max(mx[d], e[d], e[d+3]); } });
     const c = mn.map((v, d) => (v + mx[d]) / 2);
-    const k = 2.3 / Math.max(mx[0]-mn[0], mx[1]-mn[1], mx[2]-mn[2]);
-    const out = new Float32Array(N * 3);
-    let ei = 0, acc = 0;
-    for (let i = 0; i < N; i++) {
-      const target = (i + 0.5) / N * total;
-      while (acc + lens[ei] < target && ei < E.length - 1) acc += lens[ei++];
-      const e = E[ei], f = lens[ei] ? (target - acc) / lens[ei] : 0;
-      for (let d = 0; d < 3; d++) out[i*3+d] = (e[d] + (e[d+3] - e[d]) * f - c[d]) * k;
+    const k = 2 / Math.hypot(mx[0]-mn[0], mx[1]-mn[1], mx[2]-mn[2]);
+    const edges = E.map(e => {
+      const v = e.map((x, i) => (x - c[i % 3]) * k);
+      // draw each edge from its lower end
+      return v[1] <= v[4] ? v : [v[3], v[4], v[5], v[0], v[1], v[2]];
+    });
+    edges.sort((a, b) => (a[1] + a[4] * .35) - (b[1] + b[4] * .35));
+    const lens = edges.map(e => Math.hypot(e[3]-e[0], e[4]-e[1], e[5]-e[2]));
+    // how far the drawing reaches on screen over a full turn, so it can be fitted once and never clipped
+    let rx = 0, y0 = 1e9, y1 = -1e9;
+    for (let s = 0; s < 72; s++) {
+      const a = s / 72 * Math.PI * 2;
+      edges.forEach(e => { for (let j = 0; j < 6; j += 3) {
+        const [x, y] = view(e[j], e[j+1], e[j+2], a);
+        rx = Math.max(rx, Math.abs(x)); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
+      } });
     }
-    return out;
+    return { edges, lens, total: lens.reduce((a, b) => a + b, 0), rx, y0, y1 };
+  }
+
+  const DIST = 6, TILT = 0.42;
+  // rotate about the vertical axis, tilt towards the viewer, then perspective; y comes back pointing up
+  function view(x, y, z, angle) {
+    const ca = Math.cos(angle), sa = Math.sin(angle), ct = Math.cos(TILT), st = Math.sin(TILT);
+    const xr = x * ca - z * sa, zr = x * sa + z * ca;
+    const yr = y * ct - zr * st, zd = y * st + zr * ct;
+    const s = DIST / (DIST - zd);
+    return [xr * s, yr * s, zd];
   }
 
   const shapes = [
-    { prompt: "A courtyard block, seven floors, 24 by 18 m", kind: "built", label: "a courtyard block, seven floors", pts: sample(courtyard()) },
-    { prompt: "A floating island with a lighthouse, low-poly", kind: "imagined", label: "a floating island with a lighthouse", pts: sample(island()) },
-    { prompt: "A pavilion with a hyperbolic paraboloid roof", kind: "built", label: "a pavilion with a saddle-shaped roof", pts: sample(pavilion()) },
-    { prompt: "A dungeon room for a roguelike, 7 by 7 tiles", kind: "imagined", label: "a dungeon room on a tile grid", pts: sample(dungeon()) },
+    { prompt: "A courtyard block, seven floors, 24 by 18 m", kind: "built", label: "a courtyard block, seven floors", geo: prepare(courtyard()) },
+    { prompt: "A floating island with a lighthouse, low-poly", kind: "imagined", label: "a floating island with a lighthouse", geo: prepare(island()) },
+    { prompt: "A pavilion with a hyperbolic paraboloid roof", kind: "built", label: "a pavilion with a saddle-shaped roof", geo: prepare(pavilion()) },
+    { prompt: "A dungeon room for a roguelike, 7 by 7 tiles", kind: "imagined", label: "a dungeon room on a tile grid", geo: prepare(dungeon()) },
   ];
 
   const canvas = document.getElementById("geo");
@@ -444,16 +490,16 @@ footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; g
     return b;
   });
 
-  let from = 0, to = 0, t0 = 0, morphing = false, last = performance.now(), held = 0;
+  let from = -1, to = 0, t0 = performance.now(), drawing = !reduce.matches, last = t0, held = 0;
   let angle = 0.65, playing = !reduce.matches;
-  const MORPH = 1800, HOLD = 4200;
+  const ERASE = 450, DRAW = 2200, HOLD = 4200;
 
   function go(i, byUser) {
-    if (i === to && !morphing) return;
+    if (i === to && !drawing) return;
     from = to; to = i; t0 = performance.now(); held = 0;
-    morphing = !reduce.matches;
+    drawing = !reduce.matches;
     buttons.forEach((b, j) => b.setAttribute("aria-pressed", String(j === i)));
-    canvas.setAttribute("aria-label", "A point drawing of " + shapes[i].label);
+    canvas.setAttribute("aria-label", "A line drawing of " + shapes[i].label);
     if (byUser && !reduce.matches) held = -2500;
     if (!running) frame(performance.now());
   }
@@ -475,39 +521,52 @@ footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; g
   }
   new ResizeObserver(resize).observe(canvas);
 
-  const STEPS = 12;
-  const mix = (a, b, w) => a.map((v, i) => Math.round(v + (b[i] - v) * w));
-  const chalk = [234, 240, 255], pink = [255, 111, 176];
-  const palette = Array.from({ length: STEPS + 1 }, (_, k) => `rgb(${mix(chalk, pink, k / STEPS).join(",")})`);
-  const ease = x => x < .5 ? 4*x*x*x : 1 - Math.pow(-2*x + 2, 3) / 2;
+  const colour = { built: "234, 240, 255", imagined: "255, 111, 176" };
+  const ease = x => 1 - Math.pow(1 - x, 3);
+
+  // draws the first `p` share of a shape's line length; returns the pen position
+  function sketch(shape, p, fade) {
+    const { edges, lens, total, rx, y0, y1 } = shape.geo;
+    // the top band is left to the pause button
+    const scale = Math.min(W * 0.44 / rx, H * 0.8 / (y1 - y0)), cx = W / 2, cy = H * 0.54 + (y0 + y1) / 2 * scale;
+    const proj = (x, y, z) => {
+      const [px, py, zd] = view(x, y, z, angle);
+      return [cx + px * scale, cy - py * scale, zd];
+    };
+    let left = p * total, pen = null;
+    ctx.lineWidth = 1.25;
+    ctx.lineCap = "round";
+    for (let i = 0; i < edges.length && left > 0; i++) {
+      const e = edges[i], f = Math.min(1, left / lens[i]);
+      left -= lens[i];
+      const a = proj(e[0], e[1], e[2]);
+      const b = proj(e[0] + (e[3]-e[0]) * f, e[1] + (e[4]-e[1]) * f, e[2] + (e[5]-e[2]) * f);
+      // nearer lines brighter, so the shape keeps its depth while it turns
+      const depth = ((a[2] + b[2]) / 2 + 1) / 2;
+      ctx.strokeStyle = `rgba(${colour[shape.kind]}, ${(0.38 + 0.62 * depth) * fade})`;
+      ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke();
+      if (f < 1) pen = b;
+    }
+    return pen;
+  }
 
   function draw() {
     if (!W) return;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, W, H);
-    const p = morphing ? Math.min(1, (performance.now() - t0) / MORPH) : 1;
-    const A = shapes[from].pts, B = shapes[to].pts;
-    const kA = shapes[from].kind === "imagined" ? 1 : 0, kB = shapes[to].kind === "imagined" ? 1 : 0;
-    const ca = Math.cos(angle), sa = Math.sin(angle), tilt = 0.5, ct = Math.cos(tilt), st = Math.sin(tilt);
-    const scale = Math.min(W, H) * 0.3, cx = W / 2, cy = H * 0.52, dist = 6;
-    const buckets = Array.from({ length: STEPS + 1 }, () => []);
-    for (let i = 0; i < N; i++) {
-      const local = ease(Math.max(0, Math.min(1, p * 1.5 - i / N * 0.5)));
-      const x = A[i*3] + (B[i*3] - A[i*3]) * local;
-      const y = A[i*3+1] + (B[i*3+1] - A[i*3+1]) * local;
-      const z = A[i*3+2] + (B[i*3+2] - A[i*3+2]) * local;
-      const xr = x * ca - z * sa, zr = x * sa + z * ca;
-      const yr = y * ct - zr * st, zd = y * st + zr * ct;
-      const s = dist / (dist - zd);
-      const k = Math.round((kA + (kB - kA) * local) * STEPS);
-      buckets[k].push(cx + xr * s * scale, cy - yr * s * scale, 0.9 + s * 0.5);
+    const t = performance.now() - t0;
+    if (drawing && from >= 0 && t < ERASE) {
+      const q = t / ERASE;
+      sketch(shapes[from], 1 - ease(q), 1 - q * 0.5);
+      return;
     }
-    buckets.forEach((b, k) => {
-      if (!b.length) return;
-      ctx.fillStyle = palette[k];
-      for (let j = 0; j < b.length; j += 3) ctx.fillRect(b[j], b[j+1], b[j+2], b[j+2]);
-    });
-    if (p >= 1) morphing = false;
+    const p = drawing ? Math.min(1, (t - (from >= 0 ? ERASE : 0)) / DRAW) : 1;
+    const pen = sketch(shapes[to], ease(p), 1);
+    if (pen && p < 1) {
+      ctx.fillStyle = `rgb(${colour[shapes[to].kind]})`;
+      ctx.beginPath(); ctx.arc(pen[0], pen[1], 2.6, 0, Math.PI * 2); ctx.fill();
+    }
+    if (p >= 1) drawing = false;
   }
 
   let running = false;
@@ -515,10 +574,10 @@ footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; g
     const dt = Math.min(64, now - last); last = now;
     if (playing) {
       angle += dt * 0.00018;
-      if (!morphing) { held += dt; if (held > HOLD) go((to + 1) % shapes.length, false); }
+      if (!drawing) { held += dt; if (held > HOLD) go((to + 1) % shapes.length, false); }
     }
     draw();
-    running = playing || morphing;
+    running = playing || drawing;
     if (running) requestAnimationFrame(frame);
   }
 
